@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useRouter } from "next/navigation";
 import type { VehicleInput } from "@/lib/vehicle-input";
 
@@ -161,17 +167,19 @@ export function VehicleForm({ initial }: { initial?: VehicleFormInitial }) {
   );
 
   // ——— voice (decision 011) ———
-  const [voiceSupported, setVoiceSupported] = useState(false);
+  const voiceSupported = useSyncExternalStore(
+    () => () => {},
+    () => {
+      const w = window as unknown as Record<string, unknown>;
+      return Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition);
+    },
+    () => false,
+  );
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [parsing, setParsing] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
-
-  useEffect(() => {
-    const w = window as unknown as Record<string, unknown>;
-    setVoiceSupported(Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition));
-  }, []);
 
   const applyDraft = useCallback(
     async (draft: {

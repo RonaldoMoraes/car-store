@@ -5,7 +5,6 @@ import {
   formatPriceBRL,
   getPublishedVehicle,
   listSimilarVehicles,
-  whatsappLink,
 } from "@paperclip/core";
 import { Gallery } from "@/components/site/gallery";
 import { LeadForms } from "@/components/site/lead-forms";
