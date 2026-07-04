@@ -12,6 +12,8 @@
   "dependencies": {
     "@paperclip/core": "workspace:*",
     "@paperclip/db": "workspace:*",
+    "@paperclip/fipe": "workspace:*",
+    "drizzle-orm": "^0.44.2",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4"

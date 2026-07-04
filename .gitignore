@@ -12,6 +12,9 @@ out/
 .env.local
 .env*.local
 
+# local photo uploads (dev)
+.uploads/
+
 # misc
 .DS_Store
 *.log

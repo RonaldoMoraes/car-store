@@ -23,6 +23,12 @@ importers:
       '@paperclip/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@paperclip/fipe':
+        specifier: workspace:*
+        version: link:../../packages/fipe
+      drizzle-orm:
+        specifier: ^0.44.2
+        version: 0.44.7(postgres@3.4.9)
       next:
         specifier: 16.2.10
         version: 16.2.10(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

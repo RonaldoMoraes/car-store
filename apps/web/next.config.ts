@@ -6,7 +6,7 @@ import path from "node:path";
 config({ path: path.resolve(__dirname, "../../.env") });
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@paperclip/db", "@paperclip/core"],
+  transpilePackages: ["@paperclip/db", "@paperclip/core", "@paperclip/fipe"],
 };
 
 export default nextConfig;
