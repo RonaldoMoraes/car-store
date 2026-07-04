@@ -19,6 +19,7 @@ export default function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Skip static assets and Next internals; /t/ is rewrite-only, never direct.
-  matcher: ["/((?!_next/|favicon.ico|.*\\..*).*)"],
+  // Skip API routes (they resolve the tenant from the Host header themselves),
+  // static assets and Next internals; /t/ is rewrite-only, never direct.
+  matcher: ["/((?!api/|_next/|favicon.ico|.*\\..*).*)"],
 };

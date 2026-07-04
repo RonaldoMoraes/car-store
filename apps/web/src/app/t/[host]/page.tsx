@@ -1,15 +1,13 @@
-import { notFound } from "next/navigation";
+import Link from "next/link";
 import {
-  formatPriceBRL,
+  countPublishedVehicles,
+  listBrandsInStock,
   listPublishedVehicles,
-  resolveTenantByHost,
-  whatsappLink,
 } from "@paperclip/core";
+import { VehicleCard } from "@/components/site/vehicle-card";
+import { getTenant } from "@/lib/tenant";
 
-// Tenant sites read live inventory — always dynamic.
 export const dynamic = "force-dynamic";
-
-const ROOT_DOMAIN = process.env.PLATFORM_ROOT_DOMAIN ?? "localhost:3000";
 
 export default async function TenantHome({
   params,
@@ -17,98 +15,97 @@ export default async function TenantHome({
   params: Promise<{ host: string }>;
 }) {
   const { host } = await params;
-  const tenant = await resolveTenantByHost(decodeURIComponent(host), ROOT_DOMAIN);
-  if (!tenant) notFound();
-
-  const vehicles = await listPublishedVehicles(tenant.id);
-  const primary = tenant.theme.primaryColor ?? "#0f172a";
-  const accent = tenant.theme.accentColor ?? "#dc2626";
+  const tenant = (await getTenant(host))!;
+  const [featured, total, brands] = await Promise.all([
+    listPublishedVehicles(tenant.id, {}, 6),
+    countPublishedVehicles(tenant.id),
+    listBrandsInStock(tenant.id),
+  ]);
 
   return (
-    <div
-      className="min-h-screen bg-zinc-50"
-      style={
-        {
-          "--tenant-primary": primary,
-          "--tenant-accent": accent,
-        } as React.CSSProperties
-      }
-    >
-      <header
-        className="px-6 py-5 text-white"
-        style={{ backgroundColor: "var(--tenant-primary)" }}
+    <main>
+      {/* Hero */}
+      <section
+        className="px-4 py-16 text-white sm:px-6 sm:py-24"
+        style={{
+          background:
+            "linear-gradient(135deg, var(--tenant-primary), color-mix(in srgb, var(--tenant-primary) 70%, black))",
+        }}
       >
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <h1 className="text-xl font-bold">{tenant.name}</h1>
-          <span className="text-sm opacity-80">
-            {tenant.city}
-            {tenant.state ? ` · ${tenant.state}` : ""}
-          </span>
+        <div className="mx-auto max-w-6xl">
+          <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl">
+            Seu próximo carro está aqui.
+          </h1>
+          <p className="mt-4 max-w-xl text-lg text-white/75">
+            {total} veículos em estoque, com preço comparado à Tabela FIPE e
+            atendimento direto no WhatsApp.
+          </p>
+
+          <form
+            action="/estoque"
+            className="mt-8 flex max-w-xl flex-col gap-3 sm:flex-row"
+          >
+            <select
+              name="marca"
+              className="flex-1 rounded-xl border-0 bg-white px-4 py-3 text-sm text-zinc-900"
+              defaultValue=""
+            >
+              <option value="">Todas as marcas</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="rounded-xl px-6 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "var(--tenant-accent)" }}
+            >
+              Ver estoque
+            </button>
+          </form>
+
+          <div className="mt-8 flex flex-wrap gap-2 text-xs font-medium text-white/80">
+            <span className="rounded-full bg-white/10 px-3 py-1.5">
+              ✓ Referência Tabela FIPE
+            </span>
+            <span className="rounded-full bg-white/10 px-3 py-1.5">
+              ✓ Atendimento no WhatsApp
+            </span>
+            <span className="rounded-full bg-white/10 px-3 py-1.5">
+              ✓ {tenant.city ?? "Loja física"}
+              {tenant.state ? ` — ${tenant.state}` : ""}
+            </span>
+          </div>
         </div>
-      </header>
+      </section>
 
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <h2 className="mb-6 text-2xl font-semibold text-zinc-900">
-          Estoque ({vehicles.length})
-        </h2>
+      {/* Featured */}
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <div className="mb-6 flex items-end justify-between">
+          <h2 className="text-2xl font-bold text-zinc-900">
+            Últimas novidades
+          </h2>
+          <Link
+            href="/estoque"
+            className="text-sm font-semibold hover:underline"
+            style={{ color: "var(--tenant-accent)" }}
+          >
+            Ver todos →
+          </Link>
+        </div>
 
-        {vehicles.length === 0 ? (
+        {featured.length === 0 ? (
           <p className="text-zinc-500">Nenhum veículo publicado no momento.</p>
         ) : (
-          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {vehicles.map((v) => (
-              <li
-                key={v.id}
-                className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
-              >
-                {v.photos[0] && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={v.photos[0].url}
-                    alt={`${v.brand} ${v.model}`}
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                )}
-                <div className="space-y-1 p-4">
-                  <h3 className="font-semibold text-zinc-900">
-                    {v.brand} {v.model}{" "}
-                    <span className="font-normal text-zinc-500">
-                      {v.version}
-                    </span>
-                  </h3>
-                  <p className="text-sm text-zinc-500">
-                    {v.modelYear} · {v.mileageKm?.toLocaleString("pt-BR")} km ·{" "}
-                    {v.transmission}
-                  </p>
-                  <p
-                    className="text-lg font-bold"
-                    style={{ color: "var(--tenant-accent)" }}
-                  >
-                    {formatPriceBRL(v.priceCents)}
-                  </p>
-                  {tenant.whatsapp && (
-                    <a
-                      href={whatsappLink(
-                        tenant.whatsapp,
-                        `Olá! Tenho interesse no ${v.brand} ${v.model} ${v.modelYear} anunciado no site.`,
-                      )}
-                      className="mt-2 inline-block rounded-lg px-4 py-2 text-sm font-semibold text-white"
-                      style={{ backgroundColor: "#25D366" }}
-                    >
-                      Chamar no WhatsApp
-                    </a>
-                  )}
-                </div>
-              </li>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {featured.map((v) => (
+              <VehicleCard key={v.id} vehicle={v} />
             ))}
-          </ul>
+          </div>
         )}
-      </main>
-
-      <footer className="border-t border-zinc-200 bg-white px-6 py-6 text-center text-sm text-zinc-500">
-        {tenant.addressLine} — {tenant.city}/{tenant.state}
-        {tenant.phone ? ` · ${tenant.phone}` : ""}
-      </footer>
-    </div>
+      </section>
+    </main>
   );
 }
