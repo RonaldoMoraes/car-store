@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: paperclip-db
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: paperclip
+      POSTGRES_DB: paperclip
+    ports:
+      - "5433:5432"
+    volumes:
+      - paperclip-pgdata:/var/lib/postgresql/data
+
+volumes:
+  paperclip-pgdata:

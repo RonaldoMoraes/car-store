@@ -1,0 +1,22 @@
+{
+  "name": "paperclip-car-store",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "pnpm --filter @paperclip/db generate",
+    "db:migrate": "pnpm --filter @paperclip/db migrate",
+    "db:seed": "pnpm --filter @paperclip/db seed",
+    "fipe:crawl": "pnpm --filter @paperclip/fipe crawl"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.0"
+  }
+}

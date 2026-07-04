@@ -1,0 +1,18 @@
+# deps
+node_modules/
+
+# builds
+.next/
+dist/
+out/
+.turbo/
+
+# env
+.env
+.env.local
+.env*.local
+
+# misc
+.DS_Store
+*.log
+tsconfig.tsbuildinfo
