@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, vehiclePhotos, vehicles } from "@paperclip/db";
+import { listTenantVehicles } from "@paperclip/core";
 import { apiSession } from "@/lib/admin-auth";
 import { vehicleValues, type VehicleInput } from "@/lib/vehicle-input";
+
+// Inventory list for the mobile app (all statuses, with photos).
+export async function GET(request: NextRequest) {
+  const auth = await apiSession(request);
+  if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const rows = await listTenantVehicles(auth.tenant.id);
+  return NextResponse.json({ vehicles: rows });
+}
 
 export async function POST(request: NextRequest) {
   const auth = await apiSession(request);

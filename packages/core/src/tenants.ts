@@ -39,3 +39,14 @@ export async function resolveTenantByHost(
     .limit(1);
   return match?.tenant ?? null;
 }
+
+/** Direct lookup — used by bearer-token (mobile) sessions, which carry the tenant id. */
+export async function getTenantById(id: string): Promise<Tenant | null> {
+  const db = getDb();
+  const [tenant] = await db
+    .select()
+    .from(tenants)
+    .where(and(eq(tenants.id, id), eq(tenants.status, "active")))
+    .limit(1);
+  return tenant ?? null;
+}

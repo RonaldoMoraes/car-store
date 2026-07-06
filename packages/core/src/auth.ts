@@ -6,7 +6,7 @@ import {
   scryptSync,
   timingSafeEqual,
 } from "node:crypto";
-import { getDb, users } from "@paperclip/db";
+import { getDb, tenants, users } from "@paperclip/db";
 import { and, eq } from "drizzle-orm";
 
 export type User = typeof users.$inferSelect;
@@ -89,4 +89,42 @@ export async function authenticateUser(
     .limit(1);
   if (!user?.passwordHash) return null;
   return verifyPassword(password, user.passwordHash) ? user : null;
+}
+
+/**
+ * Mobile login: no host to resolve the tenant from, so we look the e-mail up
+ * across tenants. Ambiguous e-mails (same address in several stores) must
+ * disambiguate with the store slug.
+ */
+export async function authenticateByEmail(
+  email: string,
+  password: string,
+  slug?: string,
+): Promise<
+  | { ok: true; user: User }
+  | { ok: false; reason: "invalid" | "ambiguous" }
+> {
+  const db = getDb();
+  const matches = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email.toLowerCase()))
+    .limit(10);
+
+  let candidates = matches;
+  if (slug) {
+    const [tenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.slug, slug.toLowerCase()))
+      .limit(1);
+    candidates = tenant ? matches.filter((u) => u.tenantId === tenant.id) : [];
+  }
+
+  const valid = candidates.filter(
+    (u) => u.passwordHash && verifyPassword(password, u.passwordHash),
+  );
+  if (valid.length === 1) return { ok: true, user: valid[0]! };
+  if (valid.length > 1) return { ok: false, reason: "ambiguous" };
+  return { ok: false, reason: "invalid" };
 }

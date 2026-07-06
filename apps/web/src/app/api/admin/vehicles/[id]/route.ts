@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, vehiclePhotos, vehicles } from "@paperclip/db";
+import { getTenantVehicle } from "@paperclip/core";
 import { and, eq } from "drizzle-orm";
 import { apiSession } from "@/lib/admin-auth";
 import { vehicleValues, type VehicleInput } from "@/lib/vehicle-input";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await apiSession(request);
+  if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const { id } = await params;
+  const vehicle = await getTenantVehicle(auth.tenant.id, id);
+  if (!vehicle) return NextResponse.json({ error: "not found" }, { status: 404 });
+  return NextResponse.json({ vehicle });
+}
 
 export async function PATCH(
   request: NextRequest,
