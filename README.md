@@ -7,6 +7,7 @@ White-label platform for Brazilian car dealerships: branded dealership websites 
 ```
 apps/
   web/        Next.js 16 — multi-tenant dealership sites + dealer back-office (/admin)
+  mobile/     Expo (React Native) — white-label B2B dealer app (one binary, themed at login)
 packages/
   db/         Drizzle ORM schema + migrations (Postgres)
   core/       Domain logic: tenants, inventory, leads, auth
@@ -37,6 +38,15 @@ pnpm dev                      # web on :3000
 
 - **Voice** — tap 🎤 and say _"Adicionar um Creta 2020 preto 2.0 Prestige completo por 90 mil reais"_: on-device pt-BR speech-to-text → heuristic parser + FIPE reverse model lookup → pre-filled form (brand inferred from model, FIPE price fetched, "completo" expanded to the standard options set). Dealer reviews and saves — voice never publishes on its own.
 - **FIPE cascade** — marca → modelo (type-ahead) → ano → price + specs autofill.
+
+## Mobile app (B2B, dealer-facing)
+
+```bash
+cd apps/mobile
+EXPO_PUBLIC_API_URL=http://<your-lan-ip>:3000 pnpm start   # scan QR with Expo Go
+```
+
+One shared binary for all dealerships — the app fetches the tenant's theme at login (`/api/mobile/login`, bearer token, 30-day session). Screens: estoque (pull-to-refresh, status badges, offline-draft retry queue), add/edit vehicle (voice/text command → same voice-parse endpoint → pre-filled ficha + FIPE match; camera/gallery photo upload; options chips), and lead inbox (WhatsApp reply deep links, status workflow). Saves that fail offline are queued in AsyncStorage and re-sent from the estoque screen.
 
 ## How multi-tenancy works
 
