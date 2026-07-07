@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MODULES, hasModule } from "@paperclip/core";
 import { requireSession } from "@/lib/admin-auth";
 
 export default async function AdminLayout({
@@ -9,7 +10,9 @@ export default async function AdminLayout({
   params: Promise<{ host: string }>;
 }) {
   const { host } = await params;
-  const { tenant } = await requireSession(host);
+  const { tenant, modules } = await requireSession(host);
+  const canEstoque = hasModule(modules, MODULES.estoque);
+  const canLeads = hasModule(modules, MODULES.leads);
 
   return (
     <div className="flex min-h-screen bg-zinc-100">
@@ -27,24 +30,30 @@ export default async function AdminLayout({
           >
             📊 Visão geral
           </Link>
-          <Link
-            href="/admin/veiculos"
-            className="block rounded-lg px-3 py-2 hover:bg-zinc-800 hover:text-white"
-          >
-            🚗 Veículos
-          </Link>
-          <Link
-            href="/admin/veiculos/novo"
-            className="block rounded-lg px-3 py-2 hover:bg-zinc-800 hover:text-white"
-          >
-            ➕ Adicionar veículo
-          </Link>
-          <Link
-            href="/admin/leads"
-            className="block rounded-lg px-3 py-2 hover:bg-zinc-800 hover:text-white"
-          >
-            💬 Leads
-          </Link>
+          {canEstoque && (
+            <>
+              <Link
+                href="/admin/veiculos"
+                className="block rounded-lg px-3 py-2 hover:bg-zinc-800 hover:text-white"
+              >
+                🚗 Veículos
+              </Link>
+              <Link
+                href="/admin/veiculos/novo"
+                className="block rounded-lg px-3 py-2 hover:bg-zinc-800 hover:text-white"
+              >
+                ➕ Adicionar veículo
+              </Link>
+            </>
+          )}
+          {canLeads && (
+            <Link
+              href="/admin/leads"
+              className="block rounded-lg px-3 py-2 hover:bg-zinc-800 hover:text-white"
+            >
+              💬 Leads
+            </Link>
+          )}
         </nav>
         <div className="space-y-2 border-t border-zinc-800 px-3 py-4">
           <a
@@ -71,8 +80,8 @@ export default async function AdminLayout({
           <span className="font-semibold">{tenant.name}</span>
           <nav className="flex gap-3 text-sm">
             <Link href="/admin">Início</Link>
-            <Link href="/admin/veiculos">Veículos</Link>
-            <Link href="/admin/leads">Leads</Link>
+            {canEstoque && <Link href="/admin/veiculos">Veículos</Link>}
+            {canLeads && <Link href="/admin/leads">Leads</Link>}
           </nav>
         </div>
         <main className="p-4 sm:p-8">{children}</main>

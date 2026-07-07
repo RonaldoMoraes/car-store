@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, leads } from "@paperclip/db";
+import { MODULES, hasModule } from "@paperclip/core";
 import { and, eq } from "drizzle-orm";
-import { apiSession } from "@/lib/admin-auth";
+import { apiSession, moduleDenied } from "@/lib/admin-auth";
 
 const STATUSES = new Set(["new", "contacted", "closed"]);
 
@@ -11,6 +12,7 @@ export async function PATCH(
 ) {
   const auth = await apiSession(request);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!hasModule(auth.modules, MODULES.leads)) return moduleDenied(MODULES.leads);
 
   const { id } = await params;
   const { status } = (await request.json()) as { status?: string };

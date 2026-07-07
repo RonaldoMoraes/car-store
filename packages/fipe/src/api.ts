@@ -102,6 +102,28 @@ export const fipeApi = {
     return data.Modelos ?? [];
   },
 
+  // Year-first search: brand + year-code → models sold that year.
+  async modelsByYear(
+    referenceCode: number,
+    vehicleType: VehicleType,
+    brandCode: string,
+    yearCode: string,
+  ): Promise<FipeLabelValue[]> {
+    const data = await post<FipeLabelValue[] | { Modelos: FipeLabelValue[] }>(
+      "ConsultarModelosAtravesDoAno",
+      {
+        codigoTabelaReferencia: referenceCode,
+        codigoTipoVeiculo: vehicleType,
+        codigoMarca: Number(brandCode),
+        ano: yearCode,
+        anoModelo: parseYearCode(yearCode).year,
+        codigoTipoCombustivel: parseYearCode(yearCode).fuelCode,
+        modeloCodigoExterno: "",
+      },
+    );
+    return Array.isArray(data) ? data : (data.Modelos ?? []);
+  },
+
   modelYears(
     referenceCode: number,
     vehicleType: VehicleType,

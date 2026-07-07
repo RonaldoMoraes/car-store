@@ -1,6 +1,7 @@
 import { getDb, leads, vehicles } from "@paperclip/db";
+import { MODULES } from "@paperclip/core";
 import { desc, eq } from "drizzle-orm";
-import { requireSession } from "@/lib/admin-auth";
+import { requireModule } from "@/lib/admin-auth";
 import { LeadStatusBadge, LeadTypeBadge } from "@/components/admin/badges";
 import { LeadActions } from "@/components/admin/lead-actions";
 
@@ -12,7 +13,7 @@ export default async function AdminLeadsPage({
   params: Promise<{ host: string }>;
 }) {
   const { host } = await params;
-  const { tenant } = await requireSession(host);
+  const { tenant } = await requireModule(host, MODULES.leads);
   const db = getDb();
 
   const rows = await db

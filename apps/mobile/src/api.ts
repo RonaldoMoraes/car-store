@@ -26,7 +26,20 @@ export type SessionTenant = {
 
 export type SessionUser = { id: string; name: string; role: string };
 
-export type Session = { token: string; tenant: SessionTenant; user: SessionUser };
+export type Session = {
+  token: string;
+  tenant: SessionTenant;
+  user: SessionUser;
+  // Effective module keys (tenant plan ∩ user allow-list). Older stored
+  // sessions may lack this — treat missing as the default plan.
+  modules?: string[];
+};
+
+export const DEFAULT_MODULES = ["estoque", "site", "leads", "fipe", "voz"];
+
+export function sessionModules(session: Session): string[] {
+  return session.modules ?? DEFAULT_MODULES;
+}
 
 export type Vehicle = {
   id: string;

@@ -1,4 +1,5 @@
 import {
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -22,6 +23,8 @@ export const users = pgTable(
     // Auth wiring lands in M3 (app login); schema is here so RLS/ownership is right from day one.
     passwordHash: text("password_hash"),
     role: userRoleEnum("role").notNull().default("staff"),
+    // null = user sees every module the tenant has; otherwise an allow-list.
+    modules: jsonb("modules").$type<string[] | null>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

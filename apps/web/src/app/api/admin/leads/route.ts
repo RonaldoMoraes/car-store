@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, leads, vehicles } from "@paperclip/db";
+import { MODULES, hasModule } from "@paperclip/core";
 import { desc, eq } from "drizzle-orm";
-import { apiSession } from "@/lib/admin-auth";
+import { apiSession, moduleDenied } from "@/lib/admin-auth";
 
 // Lead inbox for the mobile app.
 export async function GET(request: NextRequest) {
   const auth = await apiSession(request);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!hasModule(auth.modules, MODULES.leads)) return moduleDenied(MODULES.leads);
 
   const db = getDb();
   const rows = await db

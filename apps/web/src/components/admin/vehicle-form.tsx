@@ -50,8 +50,21 @@ const labelClass =
 
 export type VehicleFormInitial = Partial<VehicleInput> & { id?: string };
 
-export function VehicleForm({ initial }: { initial?: VehicleFormInitial }) {
+const CALENDAR_YEARS = Array.from(
+  { length: new Date().getFullYear() + 2 - 1980 },
+  (_, i) => new Date().getFullYear() + 1 - i,
+);
+
+export function VehicleForm({
+  initial,
+  modules,
+}: {
+  initial?: VehicleFormInitial;
+  modules: string[];
+}) {
   const router = useRouter();
+  const canVoice = modules.includes("voz");
+  const canFipe = modules.includes("fipe");
 
   // ——— fields ———
   const [brand, setBrand] = useState(initial?.brand ?? "");
@@ -95,24 +108,71 @@ export function VehicleForm({ initial }: { initial?: VehicleFormInitial }) {
   const [fipeModel, setFipeModel] = useState("");
   const [fipeModelName, setFipeModelName] = useState("");
   const [fipeYear, setFipeYear] = useState("");
+  // Year-first path: the dealer picks a calendar year before any model.
+  const [fipeCalendarYear, setFipeCalendarYear] = useState<number | "">("");
   const [fipeLoading, setFipeLoading] = useState(false);
 
   useEffect(() => {
+    if (!canFipe) return;
     fetch("/api/admin/fipe?q=brands")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setBrands(d.brands))
       .catch(() => {});
-  }, []);
+  }, [canFipe]);
 
   const loadModels = useCallback(async (brandCode: string) => {
     setModels([]);
     setYears([]);
     setFipeModel("");
+    setFipeModelName("");
     setFipeYear("");
+    setFipeCalendarYear("");
     if (!brandCode) return;
     const r = await fetch(`/api/admin/fipe?q=models&brand=${brandCode}`);
     if (r.ok) setModels((await r.json()).models);
   }, []);
+
+  // Year-first: picking a calendar year (with no model chosen) narrows the
+  // model list to what that brand sold that year.
+  const selectCalendarYear = useCallback(
+    async (value: string) => {
+      const year = value ? Number(value) : "";
+      setFipeCalendarYear(year);
+      if (!year || !fipeBrand || fipeModel) return;
+      setFipeLoading(true);
+      try {
+        const r = await fetch(
+          `/api/admin/fipe?q=modelsByYear&brand=${fipeBrand}&calendarYear=${year}`,
+        );
+        if (r.ok) {
+          const { models: byYear } = await r.json();
+          setModels(byYear);
+          setNotice(
+            byYear.length > 0
+              ? `${byYear.length} modelos de ${year} — escolha o modelo.`
+              : `Nenhum modelo dessa marca em ${year}.`,
+          );
+        }
+      } finally {
+        setFipeLoading(false);
+      }
+    },
+    [fipeBrand, fipeModel],
+  );
+
+  // Clear model+year (either order) but keep the brand — restart the search.
+  const clearFipeSelection = useCallback(async () => {
+    setFipeModel("");
+    setFipeModelName("");
+    setFipeYear("");
+    setFipeCalendarYear("");
+    setYears([]);
+    setNotice("");
+    if (fipeBrand) {
+      const r = await fetch(`/api/admin/fipe?q=models&brand=${fipeBrand}`);
+      if (r.ok) setModels((await r.json()).models);
+    }
+  }, [fipeBrand]);
 
   const loadYears = useCallback(
     async (brandCode: string, modelCode: string) => {
@@ -356,6 +416,7 @@ export function VehicleForm({ initial }: { initial?: VehicleFormInitial }) {
   return (
     <div className="space-y-6">
       {/* Voice */}
+      {canVoice && (
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -412,12 +473,25 @@ export function VehicleForm({ initial }: { initial?: VehicleFormInitial }) {
           </div>
         )}
       </section>
+      )}
 
       {/* FIPE assist */}
+      {canFipe && (
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-zinc-400">
-          Busca FIPE (preenche a ficha)
-        </h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-400">
+            Busca FIPE (preenche a ficha) — modelo ou ano, na ordem que preferir
+          </h2>
+          {(fipeModel || fipeYear || fipeCalendarYear) && (
+            <button
+              type="button"
+              onClick={() => void clearFipeSelection()}
+              className="text-xs font-semibold text-zinc-500 underline hover:text-zinc-800"
+            >
+              Limpar modelo/ano
+            </button>
+          )}
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className={labelClass}>Marca</label>
@@ -438,18 +512,37 @@ export function VehicleForm({ initial }: { initial?: VehicleFormInitial }) {
             </select>
           </div>
           <div>
-            <label className={labelClass}>Modelo</label>
+            <label className={labelClass}>
+              Modelo{fipeCalendarYear ? ` (de ${fipeCalendarYear})` : ""}
+            </label>
             <input
               className={inputClass}
               list="fipe-models"
               value={fipeModelName}
-              placeholder={models.length ? "Digite para buscar…" : "Escolha a marca"}
+              disabled={!fipeBrand}
+              placeholder={
+                !fipeBrand
+                  ? "Escolha a marca"
+                  : models.length
+                    ? "Digite para buscar…"
+                    : "Carregando…"
+              }
               onChange={(e) => {
                 setFipeModelName(e.target.value);
                 const m = models.find((x) => x.name === e.target.value);
                 if (m) {
                   setFipeModel(m.code);
-                  void loadYears(fipeBrand, m.code);
+                  void (async () => {
+                    const ys = await loadYears(fipeBrand, m.code);
+                    // Year-first: auto-resolve the FIPE year and price.
+                    if (fipeCalendarYear) {
+                      const match = ys.find((y) => y.year === fipeCalendarYear);
+                      if (match) {
+                        setFipeYear(match.code);
+                        await applyFipePrice(fipeBrand, m.code, match.code);
+                      }
+                    }
+                  })();
                 }
               }}
             />
@@ -461,26 +554,41 @@ export function VehicleForm({ initial }: { initial?: VehicleFormInitial }) {
           </div>
           <div>
             <label className={labelClass}>Ano</label>
-            <select
-              className={inputClass}
-              value={fipeYear}
-              disabled={years.length === 0}
-              onChange={(e) => {
-                setFipeYear(e.target.value);
-                if (e.target.value) {
-                  void applyFipePrice(fipeBrand, fipeModel, e.target.value);
-                }
-              }}
-            >
-              <option value="">
-                {years.length ? "Selecione…" : "Escolha o modelo"}
-              </option>
-              {years.map((y) => (
-                <option key={y.code} value={y.code}>
-                  {y.year === 32000 ? "Zero km" : y.year}
+            {years.length > 0 ? (
+              <select
+                className={inputClass}
+                value={fipeYear}
+                onChange={(e) => {
+                  setFipeYear(e.target.value);
+                  if (e.target.value) {
+                    void applyFipePrice(fipeBrand, fipeModel, e.target.value);
+                  }
+                }}
+              >
+                <option value="">Selecione…</option>
+                {years.map((y) => (
+                  <option key={y.code} value={y.code}>
+                    {y.year === 32000 ? "Zero km" : y.year}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select
+                className={inputClass}
+                value={fipeCalendarYear}
+                disabled={!fipeBrand}
+                onChange={(e) => void selectCalendarYear(e.target.value)}
+              >
+                <option value="">
+                  {fipeBrand ? "Ou comece pelo ano…" : "Escolha a marca"}
                 </option>
-              ))}
-            </select>
+                {CALENDAR_YEARS.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
         {(fipeLoading || notice) && (
@@ -489,6 +597,7 @@ export function VehicleForm({ initial }: { initial?: VehicleFormInitial }) {
           </p>
         )}
       </section>
+      )}
 
       {/* Ficha */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">

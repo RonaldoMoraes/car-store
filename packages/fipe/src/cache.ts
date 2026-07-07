@@ -7,6 +7,7 @@ import {
   fipeModelYears,
   fipePrices,
   fipeReferenceMonths,
+  fipeYearModels,
   type Db,
 } from "@paperclip/db";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
@@ -161,6 +162,57 @@ export async function getPrice(
   };
   await db.insert(fipePrices).values(row).onConflictDoNothing();
   return row;
+}
+
+// Year-first search (Founder directive): brand + calendar year → models sold
+// that year. FIPE keys years as "<year>-<fuel>"; we query the common fuel
+// codes and merge, then cache the union — same immutability as everything else.
+export async function getModelsByYear(
+  db: Db,
+  referenceCode: number,
+  vehicleType: VehicleType,
+  brandCode: string,
+  year: number,
+) {
+  const where = and(
+    eq(fipeYearModels.referenceCode, referenceCode),
+    eq(fipeYearModels.vehicleType, vehicleType),
+    eq(fipeYearModels.brandCode, brandCode),
+    eq(fipeYearModels.year, year),
+  );
+  const cached = await db.select().from(fipeYearModels).where(where);
+  if (cached.length > 0) return cached;
+
+  const merged = new Map<string, string>();
+  for (const fuelCode of [1, 2, 3, 5]) {
+    // 1 gasolina, 2 etanol, 3 diesel, 5 flex/híbrido (observed in current tables)
+    try {
+      const models = await fipeApi.modelsByYear(
+        referenceCode,
+        vehicleType,
+        brandCode,
+        `${year}-${fuelCode}`,
+      );
+      for (const m of models) merged.set(String(m.Value), m.Label);
+    } catch {
+      // a fuel variant with no results errors on FIPE's side — fine
+    }
+  }
+  if (merged.size === 0) return [];
+  await db
+    .insert(fipeYearModels)
+    .values(
+      [...merged.entries()].map(([modelCode, name]) => ({
+        referenceCode,
+        vehicleType,
+        brandCode,
+        year,
+        modelCode,
+        name,
+      })),
+    )
+    .onConflictDoNothing();
+  return db.select().from(fipeYearModels).where(where);
 }
 
 // Reverse lookup for the voice flow (decision 011): "Creta" → Hyundai's Creta models,

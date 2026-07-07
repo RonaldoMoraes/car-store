@@ -119,6 +119,28 @@ export const fipePrices = pgTable(
   ],
 );
 
+// Year-first search (Founder directive 2026-07-07): brand + year → models,
+// cached like everything else, keyed by reference month.
+export const fipeYearModels = pgTable(
+  "fipe_year_models",
+  {
+    referenceCode: integer("reference_code").notNull(),
+    vehicleType: integer("vehicle_type").notNull(),
+    brandCode: text("brand_code").notNull(),
+    year: integer("year").notNull(),
+    modelCode: text("model_code").notNull(),
+    name: text("name").notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({
+      columns: [t.referenceCode, t.vehicleType, t.brandCode, t.year, t.modelCode],
+    }),
+  ],
+);
+
 export const fipeCrawlState = pgTable("fipe_crawl_state", {
   key: text("key").primaryKey(),
   value: jsonb("value").$type<Record<string, unknown>>().notNull(),

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, vehiclePhotos, vehicles } from "@paperclip/db";
-import { getTenantVehicle } from "@paperclip/core";
+import { MODULES, getTenantVehicle, hasModule } from "@paperclip/core";
 import { and, eq } from "drizzle-orm";
-import { apiSession } from "@/lib/admin-auth";
+import { apiSession, moduleDenied } from "@/lib/admin-auth";
 import { vehicleValues, type VehicleInput } from "@/lib/vehicle-input";
 
 export async function GET(
@@ -11,6 +11,7 @@ export async function GET(
 ) {
   const auth = await apiSession(request);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!hasModule(auth.modules, MODULES.estoque)) return moduleDenied(MODULES.estoque);
   const { id } = await params;
   const vehicle = await getTenantVehicle(auth.tenant.id, id);
   if (!vehicle) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -23,6 +24,7 @@ export async function PATCH(
 ) {
   const auth = await apiSession(request);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!hasModule(auth.modules, MODULES.estoque)) return moduleDenied(MODULES.estoque);
 
   const { id } = await params;
   const db = getDb();
@@ -80,6 +82,7 @@ export async function DELETE(
 ) {
   const auth = await apiSession(request);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!hasModule(auth.modules, MODULES.estoque)) return moduleDenied(MODULES.estoque);
 
   const { id } = await params;
   const db = getDb();

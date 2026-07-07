@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { tenant } = auth;
   return NextResponse.json({
+    modules: auth.modules,
     tenant: {
       id: tenant.id,
       slug: tenant.slug,

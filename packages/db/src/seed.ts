@@ -3,6 +3,7 @@ config({ path: "../../.env" });
 
 import { scryptSync, randomBytes } from "node:crypto";
 import { closeDb, getDb } from "./client";
+import { tenantModules } from "./schema/modules";
 import { tenantDomains, tenants } from "./schema/tenants";
 import { users } from "./schema/users";
 import { vehiclePhotos, vehicles } from "./schema/vehicles";
@@ -55,6 +56,14 @@ async function main() {
     passwordHash: hashPassword("demo1234"),
     role: "owner",
   });
+
+  // Essencial plan modules
+  await db.insert(tenantModules).values(
+    ["estoque", "site", "leads", "fipe", "voz"].map((module) => ({
+      tenantId: demo.id,
+      module,
+    })),
+  );
 
   const seedVehicles = [
     {

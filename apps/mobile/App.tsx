@@ -11,6 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import {
   clearSession,
   loadSession,
+  sessionModules,
   type Session,
   type Vehicle,
 } from "./src/api";
@@ -54,6 +55,7 @@ export default function App() {
 
   const primary = session.tenant.theme.primaryColor ?? "#0f172a";
   const accent = session.tenant.theme.accentColor ?? "#dc2626";
+  const modules = sessionModules(session);
   const inForm = screen.name === "form";
 
   return (
@@ -90,10 +92,13 @@ export default function App() {
             onEdit={(vehicle) => setScreen({ name: "form", vehicle })}
           />
         )}
-        {screen.name === "leads" && <LeadsScreen accent={accent} />}
+        {screen.name === "leads" && modules.includes("leads") && (
+          <LeadsScreen accent={accent} />
+        )}
         {screen.name === "form" && (
           <VehicleFormScreen
             accent={accent}
+            modules={modules}
             vehicle={screen.vehicle}
             onDone={() => setScreen({ name: "inventory" })}
             onCancel={() => setScreen({ name: "inventory" })}
@@ -110,12 +115,14 @@ export default function App() {
               accent={accent}
               onPress={() => setScreen({ name: "inventory" })}
             />
-            <TabButton
-              label="💬 Leads"
-              active={screen.name === "leads"}
-              accent={accent}
-              onPress={() => setScreen({ name: "leads" })}
-            />
+            {modules.includes("leads") && (
+              <TabButton
+                label="💬 Leads"
+                active={screen.name === "leads"}
+                accent={accent}
+                onPress={() => setScreen({ name: "leads" })}
+              />
+            )}
           </View>
         </SafeAreaView>
       )}

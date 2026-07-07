@@ -52,15 +52,18 @@ function photoUri(url: string): string {
 
 export function VehicleFormScreen({
   accent,
+  modules,
   vehicle,
   onDone,
   onCancel,
 }: {
   accent: string;
+  modules: string[];
   vehicle?: Vehicle;
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const canVoice = modules.includes("voz");
   const [brand, setBrand] = useState(vehicle?.brand ?? "");
   const [model, setModel] = useState(vehicle?.model ?? "");
   const [version, setVersion] = useState(vehicle?.version ?? "");
@@ -242,6 +245,7 @@ export function VehicleFormScreen({
     >
       <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
         {/* Voice / command bar */}
+        {canVoice && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Fale o carro 🎤</Text>
           <Text style={styles.hint}>
@@ -293,6 +297,7 @@ export function VehicleFormScreen({
           )}
           {notice ? <Text style={styles.notice}>{notice}</Text> : null}
         </View>
+        )}
 
         {/* Ficha */}
         <View style={styles.card}>

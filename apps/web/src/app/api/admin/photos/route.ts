@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import { apiSession } from "@/lib/admin-auth";
+import { MODULES, hasModule } from "@paperclip/core";
+import { apiSession, moduleDenied } from "@/lib/admin-auth";
 
 // Local-disk storage for the MVP; swaps to Vercel Blob at deploy (same contract).
 const UPLOAD_DIR = path.join(process.cwd(), ".uploads");
@@ -16,6 +17,7 @@ const MAX_BYTES = 8 * 1024 * 1024;
 export async function POST(request: NextRequest) {
   const auth = await apiSession(request);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!hasModule(auth.modules, MODULES.estoque)) return moduleDenied(MODULES.estoque);
 
   const form = await request.formData();
   const file = form.get("file");

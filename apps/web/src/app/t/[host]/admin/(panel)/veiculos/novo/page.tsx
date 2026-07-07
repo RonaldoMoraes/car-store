@@ -1,4 +1,5 @@
-import { requireSession } from "@/lib/admin-auth";
+import { MODULES } from "@paperclip/core";
+import { requireModule } from "@/lib/admin-auth";
 import { VehicleForm } from "@/components/admin/vehicle-form";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ export default async function NewVehiclePage({
   params: Promise<{ host: string }>;
 }) {
   const { host } = await params;
-  await requireSession(host);
+  const { modules } = await requireModule(host, MODULES.estoque);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -20,7 +21,7 @@ export default async function NewVehiclePage({
           revise e salve.
         </p>
       </div>
-      <VehicleForm />
+      <VehicleForm modules={modules} />
     </div>
   );
 }

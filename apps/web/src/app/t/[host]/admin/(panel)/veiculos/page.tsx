@@ -1,6 +1,11 @@
 import Link from "next/link";
-import { formatKm, formatPriceBRL, listTenantVehicles } from "@paperclip/core";
-import { requireSession } from "@/lib/admin-auth";
+import {
+  MODULES,
+  formatKm,
+  formatPriceBRL,
+  listTenantVehicles,
+} from "@paperclip/core";
+import { requireModule } from "@/lib/admin-auth";
 import { VehicleStatusBadge } from "@/components/admin/badges";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +16,7 @@ export default async function AdminVehiclesPage({
   params: Promise<{ host: string }>;
 }) {
   const { host } = await params;
-  const { tenant } = await requireSession(host);
+  const { tenant } = await requireModule(host, MODULES.estoque);
   const vehicles = await listTenantVehicles(tenant.id);
 
   return (

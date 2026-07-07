@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   authenticateByEmail,
   createSessionToken,
+  getEffectiveModules,
   getTenantById,
 } from "@paperclip/core";
 
@@ -39,9 +40,11 @@ export async function POST(request: NextRequest) {
     { userId: result.user.id, tenantId: tenant.id },
     60 * 60 * 24 * 30,
   );
+  const modules = await getEffectiveModules(tenant.id, result.user.id);
 
   return NextResponse.json({
     token,
+    modules,
     user: { id: result.user.id, name: result.user.name, role: result.user.role },
     tenant: {
       id: tenant.id,

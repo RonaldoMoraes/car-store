@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@paperclip/db";
+import { MODULES, hasModule } from "@paperclip/core";
 import {
   getBrands,
   getCurrentReferenceCode,
   getModelYears,
   getModels,
+  getModelsByYear,
   getPrice,
 } from "@paperclip/fipe";
-import { apiSession } from "@/lib/admin-auth";
+import { apiSession, moduleDenied } from "@/lib/admin-auth";
 
-// One endpoint, four lookups (?q=brands|models|years|price) over the
-// fetch-through FIPE cache. Years/prices may hit FIPE live on cold cache.
+// One endpoint, five lookups (?q=brands|models|modelsByYear|years|price) over
+// the fetch-through FIPE cache. Cold-cache lookups may hit FIPE live; every
+// response is persisted keyed by reference month before it is returned.
 export async function GET(request: NextRequest) {
   const auth = await apiSession(request);
   if (!auth) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!hasModule(auth.modules, MODULES.fipe)) return moduleDenied(MODULES.fipe);
 
   const sp = request.nextUrl.searchParams;
   const q = sp.get("q");
@@ -35,6 +39,18 @@ export async function GET(request: NextRequest) {
       case "models": {
         if (!brand) return NextResponse.json({ error: "brand required" }, { status: 400 });
         const rows = await getModels(db, ref, 1, brand);
+        return NextResponse.json({
+          models: rows.map((m) => ({ code: m.modelCode, name: m.name })),
+        });
+      }
+      case "modelsByYear": {
+        const year = Number(sp.get("calendarYear"));
+        if (!brand || !year)
+          return NextResponse.json(
+            { error: "brand+calendarYear required" },
+            { status: 400 },
+          );
+        const rows = await getModelsByYear(db, ref, 1, brand, year);
         return NextResponse.json({
           models: rows.map((m) => ({ code: m.modelCode, name: m.name })),
         });

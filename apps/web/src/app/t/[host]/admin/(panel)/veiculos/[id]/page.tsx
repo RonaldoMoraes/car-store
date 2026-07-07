@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getTenantVehicle } from "@paperclip/core";
-import { requireSession } from "@/lib/admin-auth";
+import { MODULES, getTenantVehicle } from "@paperclip/core";
+import { requireModule } from "@/lib/admin-auth";
 import { VehicleForm } from "@/components/admin/vehicle-form";
 import { DeleteVehicleButton } from "@/components/admin/delete-vehicle";
 
@@ -12,7 +12,7 @@ export default async function EditVehiclePage({
   params: Promise<{ host: string; id: string }>;
 }) {
   const { host, id } = await params;
-  const { tenant } = await requireSession(host);
+  const { tenant, modules } = await requireModule(host, MODULES.estoque);
   const vehicle = await getTenantVehicle(tenant.id, id);
   if (!vehicle) notFound();
 
@@ -28,6 +28,7 @@ export default async function EditVehiclePage({
         <DeleteVehicleButton vehicleId={vehicle.id} />
       </div>
       <VehicleForm
+        modules={modules}
         initial={{
           id: vehicle.id,
           brand: vehicle.brand,
